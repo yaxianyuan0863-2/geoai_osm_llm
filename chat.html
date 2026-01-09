@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>GeoAI OSM RAG Demo</title>
+  <title>GeoAI OSM RAG</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet -->
@@ -17,16 +17,6 @@
       font-family: 'Segoe UI', Arial, sans-serif;
       margin: 0;
       background: #f5f5f5;
-    }
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 15px 20px;
-      text-align: center;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 1.5em;
     }
     .topbar {
       padding: 15px;
@@ -69,7 +59,7 @@
     }
     .main-container {
       display: flex;
-      height: calc(100vh - 130px);
+      height: calc(100vh - 100px);
     }
     #map {
       flex: 1;
@@ -184,10 +174,6 @@
 </head>
 
 <body>
-  <div class="header">
-    <h1>🗺️ GeoAI OSM Feature Extraction Demo</h1>
-  </div>
-
   <div class="topbar">
     <label>Query:</label>
     <input id="query" value="Find all cafes in Lund" placeholder="e.g., Find all bus stops in Malmö" />
@@ -211,7 +197,7 @@
       <div id="log">
         <p>Enter a query and click Search to begin.</p>
         <p style="color: #666; font-size: 12px;">
-          This demo uses RAG (Retrieval-Augmented Generation) to find the correct OSM tag,
+          This system uses RAG (Retrieval-Augmented Generation) to find the correct OSM tag,
           then extracts matching features from local OSM data.
         </p>
       </div>
