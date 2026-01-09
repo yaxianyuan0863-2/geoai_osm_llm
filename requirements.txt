@@ -1,0 +1,19 @@
+# Core dependencies
+numpy
+pandas
+requests
+beautifulsoup4
+lxml
+
+# Embedding & Vector Search
+sentence-transformers
+faiss-cpu
+
+# OSM Processing
+osmium
+
+# Web Server
+flask
+
+# Optional: Ollama Python SDK (可选，我们用 requests 直接调用 API)
+# ollama

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.idea/
+.vscode/
+
+# 排除大型数据文件
+data/osm/*.pbf
+data/osm/*.osm
+
+# 排除输出文件
+output/

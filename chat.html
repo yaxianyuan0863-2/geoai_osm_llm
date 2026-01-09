@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>GeoAI OSM RAG Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    .topbar {
+      padding: 15px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .topbar label {
+      font-weight: 600;
+      color: #333;
+    }
+    .topbar input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    #query {
+      width: 350px;
+    }
+    button {
+      padding: 8px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    button:hover {
+      background: #5a6fd6;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .main-container {
+      display: flex;
+      height: calc(100vh - 130px);
+    }
+    #map {
+      flex: 1;
+      min-height: 400px;
+    }
+    .sidebar {
+      width: 400px;
+      background: white;
+      border-left: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #ddd;
+      font-weight: 600;
+    }
+    #log {
+      flex: 1;
+      padding: 15px;
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .result-section {
+      margin-bottom: 15px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .result-section h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #667eea;
+    }
+    .evidence-item {
+      padding: 10px;
+      margin: 8px 0;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .evidence-item .score {
+      color: #667eea;
+      font-weight: 600;
+    }
+    .evidence-item .tag {
+      background: #e8f0fe;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    .evidence-item .url {
+      color: #1a73e8;
+      word-break: break-all;
+    }
+    .evidence-item .snippet {
+      color: #666;
+      margin-top: 5px;
+      font-style: italic;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .status-success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-llm {
+      background: #e8f0fe;
+      color: #1a73e8;
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .example-queries {
+      padding: 10px 15px;
+      background: #fffbea;
+      border-bottom: 1px solid #ddd;
+      font-size: 12px;
+    }
+    .example-queries span {
+      cursor: pointer;
+      color: #667eea;
+      text-decoration: underline;
+      margin-right: 15px;
+    }
+    .example-queries span:hover {
+      color: #764ba2;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>🗺️ GeoAI OSM Feature Extraction Demo</h1>
+  </div>
+
+  <div class="topbar">
+    <label>Query:</label>
+    <input id="query" value="Find all cafes in Lund" placeholder="e.g., Find all bus stops in Malmö" />
+    <button id="searchBtn" onclick="run()">🔍 Search</button>
+    <span id="loadingIndicator" style="display:none;"><span class="loading"></span> Processing...</span>
+  </div>
+
+  <div class="example-queries">
+    <strong>Examples:</strong>
+    <span onclick="setQuery('Find all cafes in Lund')">cafes in Lund</span>
+    <span onclick="setQuery('Show restaurants in Malmö')">restaurants in Malmö</span>
+    <span onclick="setQuery('Find bus stops in Uppsala')">bus stops in Uppsala</span>
+    <span onclick="setQuery('hospitals in Stockholm')">hospitals in Stockholm</span>
+    <span onclick="setQuery('supermarkets in Gothenburg')">supermarkets in Gothenburg</span>
+  </div>
+
+  <div class="main-container">
+    <div id="map"></div>
+    <div class="sidebar">
+      <div class="sidebar-header">📋 Results & Evidence</div>
+      <div id="log">
+        <p>Enter a query and click Search to begin.</p>
+        <p style="color: #666; font-size: 12px;">
+          This demo uses RAG (Retrieval-Augmented Generation) to find the correct OSM tag,
+          then extracts matching features from local OSM data.
+        </p>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Initialize map centered on Sweden
+  const map = L.map('map').setView([55.7047, 13.1910], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  let geoLayer = null;
+
+  function setQuery(q) {
+    document.getElementById('query').value = q;
+  }
+
+  function setLoading(loading) {
+    document.getElementById('searchBtn').disabled = loading;
+    document.getElementById('loadingIndicator').style.display = loading ? 'inline' : 'none';
+  }
+
+  function renderLog(data) {
+    const log = document.getElementById('log');
+    
+    if (data.status === 'error') {
+      log.innerHTML = `
+        <div class="result-section">
+          <span class="status-badge status-error">Error</span>
+          <p>${data.message}</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Build result HTML
+    let html = `
+      <div class="result-section">
+        <h3>🎯 Query Result</h3>
+        <span class="status-badge status-success">Success</span>
+        ${data.llm_ok ? '<span class="status-badge status-llm" style="margin-left:5px;">LLM Used</span>' : ''}
+        <p><strong>Place:</strong> ${data.place || 'N/A'}</p>
+        <p><strong>Tag:</strong> <code>${data.chosen_tag}</code></p>
+        <p><strong>Features found:</strong> ${data.count}</p>
+        ${data.llm_confidence ? `<p><strong>LLM Confidence:</strong> ${(data.llm_confidence * 100).toFixed(0)}%</p>` : ''}
+      </div>
+    `;
+
+    // Evidence section
+    if (data.evidence && data.evidence.length > 0) {
+      html += `<div class="result-section"><h3>📚 RAG Evidence (Top ${data.evidence.length})</h3>`;
+      for (const e of data.evidence) {
+        html += `
+          <div class="evidence-item">
+            <span class="score">Score: ${e.score.toFixed(3)}</span>
+            <span class="tag">${e.key}=${e.value}</span>
+            <div class="url"><a href="${e.url}" target="_blank">${e.url}</a></div>
+            <div class="snippet">${e.snippet}</div>
+          </div>
+        `;
+      }
+      html += `</div>`;
+    }
+
+    log.innerHTML = html;
+  }
+
+  async function loadGeoJSON(url) {
+    try {
+      const res = await fetch(url + '?t=' + Date.now()); // cache bust
+      const gj = await res.json();
+
+      if (geoLayer) {
+        map.removeLayer(geoLayer);
+      }
+
+      geoLayer = L.geoJSON(gj, {
+        pointToLayer: (feature, latlng) => {
+          return L.circleMarker(latlng, {
+            radius: 6,
+            fillColor: '#667eea',
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+          });
+        },
+        onEachFeature: (feature, layer) => {
+          const props = feature.properties;
+          let popup = `<strong>${props.name || 'Unnamed'}</strong><br>`;
+          popup += `OSM ID: ${props.osm_id}<br>`;
+          if (props.tags) {
+            for (const [k, v] of Object.entries(props.tags)) {
+              if (k !== 'name') {
+                popup += `${k}: ${v}<br>`;
+              }
+            }
+          }
+          layer.bindPopup(popup);
+        }
+      }).addTo(map);
+
+      const bounds = geoLayer.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds.pad(0.1));
+      }
+    } catch (err) {
+      console.error('Failed to load GeoJSON:', err);
+    }
+  }
+
+  async function run() {
+    const query = document.getElementById('query').value.trim();
+    if (!query) {
+      alert('Please enter a query');
+      return;
+    }
+
+    setLoading(true);
+    document.getElementById('log').innerHTML = '<p><span class="loading"></span> Processing query...</p>';
+
+    try {
+      const resp = await fetch("/chat", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ query })
+      });
+
+      const data = await resp.json();
+      renderLog(data);
+
+      if (data.status === 'success' && data.geojson_url) {
+        await loadGeoJSON(data.geojson_url);
+      }
+    } catch (err) {
+      renderLog({
+        status: 'error',
+        message: 'Network error: ' + err.message
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Run on Enter key
+  document.getElementById('query').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') run();
+  });
+</script>
+
+</body>
+</html>
